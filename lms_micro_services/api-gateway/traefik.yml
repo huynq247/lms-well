@@ -1,0 +1,41 @@
+# Traefik Static Configuration
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: microservices
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+
+# Health check
+ping: {}
+
+# Rate limiting
+http:
+  middlewares:
+    default-ratelimit:
+      rateLimit:
+        burst: 100
+        average: 50

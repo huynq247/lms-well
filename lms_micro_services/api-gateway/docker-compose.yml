@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Traefik API Gateway
+  traefik:
+    image: traefik:v3.1
+    container_name: api-gateway
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --log.level=INFO
+      - --accesslog=true
+      - --metrics.prometheus=true
+    ports:
+      - "80:80"        # HTTP
+      - "443:443"      # HTTPS  
+      - "8080:8080"    # Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
+    networks:
+      - microservices
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`localhost`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+  # Assignment Service
+  assignment-service:
+    build: ../assignment-service
+    container_name: assignment-service
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/assignment_db
+      - CONTENT_SERVICE_URL=http://content-service:8002
+    depends_on:
+      - postgres
+    networks:
+      - microservices
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.assignment.rule=PathPrefix(`/api/assignments`) || PathPrefix(`/api/progress`) || PathPrefix(`/api/sessions`) || PathPrefix(`/api/analytics`)"
+      - "traefik.http.routers.assignment.service=assignment"
+      - "traefik.http.services.assignment.loadbalancer.server.port=8004"
+
+  # Content Service  
+  content-service:
+    build: ../content-service
+    container_name: content-service
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017/content_db
+      - ASSIGNMENT_SERVICE_URL=http://assignment-service:8004
+    depends_on:
+      - mongo
+    networks:
+      - microservices
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.content.rule=PathPrefix(`/api/content`) || PathPrefix(`/api/courses`) || PathPrefix(`/api/decks`)"
+      - "traefik.http.routers.content.service=content"
+      - "traefik.http.services.content.loadbalancer.server.port=8002"
+
+  # PostgreSQL for Assignment Service
+  postgres:
+    image: postgres:15
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: assignment_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - microservices
+    ports:
+      - "5432:5432"
+
+  # MongoDB for Content Service
+  mongo:
+    image: mongo:7
+    container_name: mongo-db
+    environment:
+      MONGO_INITDB_DATABASE: content_db
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - microservices
+    ports:
+      - "27017:27017"
+
+volumes:
+  postgres_data:
+  mongo_data:
+
+networks:
+  microservices:
+    driver: bridge

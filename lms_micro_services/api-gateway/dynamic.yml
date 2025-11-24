@@ -1,0 +1,82 @@
+# Traefik Dynamic Configuration
+http:
+  middlewares:
+    # CORS Middleware
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS  
+          - PUT
+          - POST
+          - DELETE
+        accessControlAllowOriginList:
+          - "*"
+        accessControlAllowHeaders:
+          - "*"
+        accessControlExposeHeaders:
+          - "*"
+        accessControlMaxAge: 86400
+
+    # Security Headers
+    security-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true
+        sslRedirect: false
+        forceSTSHeader: false
+
+    # Rate Limiting
+    api-ratelimit:
+      rateLimit:
+        burst: 50
+        average: 20
+
+    # Request Logging
+    request-logger:
+      plugin:
+        dev:
+          headers:
+            - "X-Request-ID"
+
+  # Circuit Breaker
+  services:
+    assignment-fallback:
+      loadBalancer:
+        servers:
+          - url: "http://assignment-service:8004"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+
+    content-fallback:
+      loadBalancer:
+        servers:
+          - url: "http://content-service:8002"  
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+
+  # Custom routing rules
+  routers:
+    # Health check aggregation
+    health-check:
+      rule: "Path(`/health`)"
+      service: "health-service"
+      middlewares:
+        - "cors-headers"
+
+    # API Documentation
+    api-docs:
+      rule: "PathPrefix(`/docs`)"
+      service: "docs-service"
+      middlewares:
+        - "cors-headers"
+
+# TCP Configuration for database connections (if needed)
+tcp:
+  routers: {}
+  services: {}
