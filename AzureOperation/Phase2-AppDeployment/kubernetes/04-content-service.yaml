@@ -1,0 +1,124 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-service
+  namespace: lms-production
+  labels:
+    app: content-service
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: content-service
+  template:
+    metadata:
+      labels:
+        app: content-service
+        tier: backend
+    spec:
+      containers:
+      - name: content-service
+        image: acrlmsprodlmsrbmfy1.azurecr.io/content-service:latest
+        ports:
+        - containerPort: 8002
+          name: http
+        env:
+        # From ConfigMap
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: POSTGRES_PORT
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: POSTGRES_DB_CONTENT
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: POSTGRES_USER
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: ENVIRONMENT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: LOG_LEVEL
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: CORS_ORIGINS
+        - name: STORAGE_ACCOUNT
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: STORAGE_ACCOUNT
+        - name: STORAGE_CONTAINER_UPLOADS
+          valueFrom:
+            configMapKeyRef:
+              name: lms-config
+              key: STORAGE_CONTAINER_UPLOADS
+        # From Secrets
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: lms-secrets
+              key: POSTGRES_PASSWORD
+        - name: AZURE_STORAGE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: lms-secrets
+              key: AZURE_STORAGE_KEY
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: content-service
+  namespace: lms-production
+  labels:
+    app: content-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8002
+    targetPort: 8002
+    protocol: TCP
+    name: http
+  selector:
+    app: content-service

@@ -1,0 +1,166 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lms-ingress
+  namespace: lms-production
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # CORS Configuration
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+spec:
+  tls:
+  - hosts:
+    - lms.yourdomain.com
+    - admin.lms.yourdomain.com
+    - student.lms.yourdomain.com
+    - teacher.lms.yourdomain.com
+    - api.lms.yourdomain.com
+    secretName: lms-tls-cert
+  rules:
+  # Admin Frontend
+  - host: admin.lms.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-admin
+            port:
+              number: 80
+  # Student Frontend
+  - host: student.lms.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-student
+            port:
+              number: 80
+  # Teacher Frontend
+  - host: teacher.lms.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-teacher
+            port:
+              number: 80
+  # API - Direct routing to backend services (no API Gateway)
+  - host: api.lms.yourdomain.com
+    http:
+      paths:
+      # Auth Service routes
+      - path: /api/v1/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8001
+      - path: /api/v1/users
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8001
+      # Assignment Service routes
+      - path: /api/assignments
+        pathType: Prefix
+        backend:
+          service:
+            name: assignment-service
+            port:
+              number: 8004
+      - path: /api/progress
+        pathType: Prefix
+        backend:
+          service:
+            name: assignment-service
+            port:
+              number: 8004
+      - path: /api/sessions
+        pathType: Prefix
+        backend:
+          service:
+            name: assignment-service
+            port:
+              number: 8004
+      - path: /api/analytics
+        pathType: Prefix
+        backend:
+          service:
+            name: assignment-service
+            port:
+              number: 8004
+      # Health check endpoint
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 8001
+
+---
+# Separate Ingress for Content Service with URL rewrite
+# Because gateway routes /api/courses/* to /api/v1/courses/*
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lms-ingress-content-rewrite
+  namespace: lms-production
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /api/v1/$1
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+spec:
+  rules:
+  - host: api.lms.yourdomain.com
+    http:
+      paths:
+      # Rewrite /api/courses/* to /api/v1/courses/*
+      - path: /api/(courses.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: content-service
+            port:
+              number: 8002
+      - path: /api/(lessons.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: content-service
+            port:
+              number: 8002
+      - path: /api/(decks.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: content-service
+            port:
+              number: 8002
+      - path: /api/(flashcards.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: content-service
+            port:
+              number: 8002

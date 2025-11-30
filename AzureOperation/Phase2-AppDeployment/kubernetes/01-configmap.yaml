@@ -1,0 +1,75 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lms-config
+  namespace: lms-production
+data:
+  # Service URLs
+  AUTH_SERVICE_URL: "http://auth-service:8001"
+  CONTENT_SERVICE_URL: "http://content-service:8002"
+  ASSIGNMENT_SERVICE_URL: "http://assignment-service:8004"
+  
+  # Database Configuration
+  POSTGRES_HOST: "psql-lms-prod-lms-rbmfy1.postgres.database.azure.com"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB_AUTH: "lms_auth"
+  POSTGRES_DB_CONTENT: "lms_content"
+  POSTGRES_DB_ASSIGNMENT: "lms_assignment"
+  POSTGRES_USER: "psqladmin"
+  
+  # Cosmos DB Configuration
+  COSMOS_ENDPOINT: "https://cosmos-lms-prod-lms-rbmfy1.documents.azure.com:443/"
+  COSMOS_DATABASE: "lms"
+  
+  # Storage Configuration
+  STORAGE_ACCOUNT: "stlmsprodlmsrbmfy1"
+  STORAGE_CONTAINER_UPLOADS: "uploads"
+  STORAGE_CONTAINER_BACKUPS: "backups"
+  STORAGE_CONTAINER_LOGS: "logs"
+  
+  # Application Configuration
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  CORS_ORIGINS: "*"
+  
+  # Key Vault Configuration
+  KEY_VAULT_NAME: "kv-lms-prod-lms-rbmfy1"
+  
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lms-config
+  namespace: lms-development
+data:
+  # Service URLs
+  AUTH_SERVICE_URL: "http://auth-service:8001"
+  CONTENT_SERVICE_URL: "http://content-service:8002"
+  ASSIGNMENT_SERVICE_URL: "http://assignment-service:8004"
+  
+  # Database Configuration
+  POSTGRES_HOST: "lms-dev-postgres-lms-rbmfy1.postgres.database.azure.com"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB_AUTH: "lms_auth"
+  POSTGRES_DB_CONTENT: "lms_content"
+  POSTGRES_DB_ASSIGNMENT: "lms_assignment"
+  POSTGRES_USER: "psqladmin"
+  
+  # Cosmos DB Configuration
+  COSMOS_ENDPOINT: "https://lms-dev-cosmos-lms-rbmfy1.documents.azure.com:443/"
+  COSMOS_DATABASE: "lms"
+  
+  # Storage Configuration
+  STORAGE_ACCOUNT: "lmsdevstlmsrbmfy1"
+  STORAGE_CONTAINER_UPLOADS: "uploads"
+  STORAGE_CONTAINER_BACKUPS: "backups"
+  STORAGE_CONTAINER_LOGS: "logs"
+  
+  # Application Configuration
+  ENVIRONMENT: "development"
+  LOG_LEVEL: "DEBUG"
+  CORS_ORIGINS: "*"
+  
+  # Key Vault Configuration
+  KEY_VAULT_NAME: "lms-dev-kv-lms-rbmfy1"
